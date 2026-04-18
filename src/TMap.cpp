@@ -157,11 +157,7 @@ void TMap::logError(const QString& msg)
     if (mpHost->mpEditorDialog) {
         /*: Used to print a map error in the Errors console in the Editor, %1 is the
  message text and a line-feed is also appended.*/
-        mpHost->mpEditorDialog->mpErrorConsole->print(tr("[MAP ERROR:] %1")
-                                                              .arg(msg)
-                                                              .append(QChar::LineFeed),
-                                                      QColor(255, 128, 0),
-                                                      QColor(Qt::black));
+        mpHost->mpEditorDialog->mpErrorConsole->print(tr("[MAP ERROR:] %1").arg(msg).append(QChar::LineFeed), QColor(255, 128, 0), QColor(Qt::black));
     }
 }
 
@@ -184,8 +180,7 @@ bool TMap::setRoomArea(int id, int area, bool deferAreaRecalculations)
 {
     TRoom* pR = mpRoomDB->getRoom(id);
     if (!pR) {
-        logError(tr("Can not set room with RoomID %1 to AreaID %2. Room does not exist!")
-                         .arg(QString::number(id), QString::number(area)));
+        logError(tr("Can not set room with RoomID %1 to AreaID %2. Room does not exist!").arg(QString::number(id), QString::number(area)));
         return false;
     }
 
@@ -195,8 +190,7 @@ bool TMap::setRoomArea(int id, int area, bool deferAreaRecalculations)
         // to see if it exists as a name only:
         if (!mpRoomDB->getAreaNamesMap().contains(area)) {
             // Ah, no it doesn't so moan:
-            logError(tr("Can not set room with RoomID %1 to AreaID %2. Area does not exist!")
-                             .arg(QString::number(id), QString::number(area)));
+            logError(tr("Can not set room with RoomID %1 to AreaID %2. Area does not exist!").arg(QString::number(id), QString::number(area)));
             return false;
         }
         // If got to this point then there is NOT a TArea instance for the given
@@ -229,6 +223,15 @@ bool TMap::setRoomCoordinates(int id, int x, int y, int z)
     TRoom* pR = mpRoomDB->getRoom(id);
     if (!pR) {
         return false;
+    }
+
+    // If the Z coordinate is changing, update the area's Z-level room index
+    // before the room's own coordinate is modified so we still have the old Z.
+    if (pR->z() != z) {
+        TArea* pA = mpRoomDB->getArea(pR->getArea());
+        if (pA) {
+            pA->moveRoomZ(id, pR->z(), z);
+        }
     }
 
     pR->setCoordinates(x, y, z);
