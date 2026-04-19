@@ -24,6 +24,7 @@
  ***************************************************************************/
 
 
+#include "TAreaZLevelIndex.h"
 #include "TMap.h"
 
 #include "TMapLabel.h"
@@ -51,6 +52,13 @@ public:
     const QSet<int>& getAreaRooms() const { return rooms; }
     const QList<int> getAreaExitRoomIds() const { return mAreaExits.uniqueKeys(); }
     const QMultiMap<int, QPair<QString, int>> getAreaExitRoomData() const;
+    // Returns the set of room IDs on the given Z level.  The returned reference
+    // is stable for the lifetime of the index (an internal empty set is used
+    // for Z levels with no rooms), so it can be safely iterated immediately.
+    const QSet<int>& getRoomsForZ(int z) const { return mZLevelIndex.roomsForZ(z); }
+    // Updates the Z-level index when a room's Z coordinate changes without going
+    // through addRoom/removeRoom (e.g. via TMap::setRoomCoordinates).
+    void moveRoomZ(int id, int fromZ, int toZ) { mZLevelIndex.moveRoom(id, fromZ, toZ); }
     void calcSpan();
     void fast_calcSpan(int);
     void determineAreaExits();
@@ -79,7 +87,7 @@ public:
     QSet<int> rooms; // rooms of this area
     // TODO: These next 2 members have not been used for some time - if at all
     // - maybe they can go?
-    QVector3D pos;   // pos auf der map und 0 punkt des area internen koordinatensystems
+    QVector3D pos; // pos auf der map und 0 punkt des area internen koordinatensystems
     QVector3D span;
     int min_x = 0;
     int min_y = 0;
@@ -124,7 +132,7 @@ private:
     void writeJson3DCoordinates(QJsonObject&, const QString&, const QVector3D&) const;
 
     QList<QByteArray> convertImageToBase64Data(const QPixmap&) const;
-    QPixmap convertBase64DataToImage(const QList<QByteArray> &) const;
+    QPixmap convertBase64DataToImage(const QList<QByteArray>&) const;
 
 
     // Supplied by C'tor and now needed to pass an error message upwards:
@@ -133,6 +141,11 @@ private:
     // key=in_area room id, pair.first=out_of_area room id pair.second=direction
     // Made private as we may change implementation detail
     QMultiMap<int, QPair<int, int>> mAreaExits;
+
+    // Per-Z-level room index. Maintained incrementally alongside TArea::rooms.
+    // Allows paintEvent to iterate only the rooms on a given Z level, avoiding
+    // an O(N-total) scan just to find which rooms match the current Z.
+    TAreaZLevelIndex mZLevelIndex;
 
     // In use this has a minimum of 3.0 and a default of 20.0, the latter will
     // be applied in the constructor initialisation list:
